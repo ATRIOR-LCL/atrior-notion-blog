@@ -10,8 +10,12 @@
   },
   "dependencies": {
     "next": "16.1.1",
+    "notion-client": "^7.7.3",
+    "prismjs": "^1.30.0",
+    "rc-dropdown": "^4.2.1",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-notion-x": "^7.7.3"
   },
   "devDependencies": {
     "eslint": "^9",

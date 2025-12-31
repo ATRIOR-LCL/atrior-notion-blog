@@ -1,66 +1,25 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+// app/page.js
+import { NotionAPI } from 'notion-client'
+import MyNotionClassRenderer from './NotionRenderer'
 
-export default function Home() {
+const notion = new NotionAPI()
+
+export default async function Page() {
+  const PAGE_ID = '2d404c3ffdd3807bbd38f6a5a781a749' // 替换为你自己的 Notion 32位 ID
+  
+  let recordMap;
+  try {
+    // 在服务端获取数据
+    recordMap = await notion.getPage(PAGE_ID)
+  } catch (error) {
+    console.error("Failed to fetch Notion data", error)
+    return <div>无法加载页面，请检查页面 ID 是否已公开分享。</div>
+  }
+
+  // 将数据传给类组件进行渲染
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.js file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+    <main>
+      <MyNotionClassRenderer recordMap={recordMap} />
+    </main>
+  )
 }
