@@ -1,13 +1,11 @@
-// app/layout.js
 import "./globals.css";
-// 引入 notion 样式
 import 'react-notion-x/src/styles.css'
-// import 'prismjs/themes/prism-tomorrow.css'
+import 'prismjs/themes/prism-tomorrow.css'
 import 'rc-dropdown/assets/index.css'
 
 export const metadata = {
-  title: "My Notion Blog",
-  description: "Simple Notion Blog with Class Components",
+  title: "atrior notion blog",
+  description: "Simple Notion Blog with Notion",
 };
 
 export default function RootLayout({ children }) {
