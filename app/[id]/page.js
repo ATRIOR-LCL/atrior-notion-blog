@@ -1,37 +1,28 @@
 import { NotionAPI } from 'notion-client'
-import { unstable_cache } from 'next/cache'
 import { notFound } from 'next/navigation'
 import MyNotionClassRenderer from '../utils/notion-render'
 
 const notion = new NotionAPI()
 
-// 使用 ISR，每 60 秒重新验证
-export const revalidate = 60
-export const dynamicParams = true
+// 强制动态渲染，确保每次请求都在服务器执行，避免首次访问 404
+export const dynamic = 'force-dynamic'
+// 禁用静态生成
+export const generateStaticParams = () => []
 
 // Notion pageId 是 32 位十六进制字符
 function isValidNotionId(id) {
   return /^[a-f0-9]{32}$/i.test(id)
 }
 
-// 缓存 Notion 页面数据，60 秒过期
-const getCachedPage = unstable_cache(
-  async (id) => {
-    const recordMap = await notion.getPage(id)
-    if (recordMap && recordMap.block && Object.keys(recordMap.block).length > 0) {
-      return recordMap
-    }
-    throw new Error('Invalid recordMap received')
-  },
-  ['notion-page'],
-  { revalidate: 60 }
-)
-
-// 带重试机制的获取页面函数
+// 直接获取页面，带重试机制
 async function getPageWithRetry(id, retries = 3, delay = 500) {
   for (let i = 0; i < retries; i++) {
     try {
-      return await getCachedPage(id)
+      const recordMap = await notion.getPage(id)
+      if (recordMap && recordMap.block && Object.keys(recordMap.block).length > 0) {
+        return recordMap
+      }
+      throw new Error('Invalid recordMap received')
     } catch (error) {
       console.error(`Attempt ${i + 1} failed for page ${id}:`, error.message)
       if (i < retries - 1) {
