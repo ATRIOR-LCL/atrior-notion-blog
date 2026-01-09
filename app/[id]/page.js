@@ -11,6 +11,9 @@ export default async function PostPage({ params }) {
     
     return <MyNotionClassRenderer recordMap={recordMap} />
   } catch (error) {
-    return <div style={{padding: '50px'}}>无法加载 ID 为 {id} 的页面。</div>
+    return <div style={{width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'}}>
+      <h1>404 - Page Not Found</h1>
+      <p>Please reload the page or check the URL.</p>
+    </div>
   }
 }
