@@ -8,9 +8,29 @@ export const metadata = {
   description: "Simple Notion Blog with Notion",
 };
 
+const themeScript = `
+  (function() {
+    try {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      function update(e) {
+        if (e.matches) {
+          document.documentElement.classList.add('dark-mode');
+        } else {
+          document.documentElement.classList.remove('dark-mode');
+        }
+      }
+      update(mq);
+      mq.addEventListener('change', update);
+    } catch (e) {}
+  })()
+`;
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="zh">
+    <html lang="zh" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );
