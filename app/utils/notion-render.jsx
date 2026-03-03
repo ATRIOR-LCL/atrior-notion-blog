@@ -79,7 +79,7 @@ class MyNotionClassRenderer extends React.Component {
             nextLink: Link,
           }}
           mapImageUrl={this.mapImageUrl}
-          mapPageUrl={(pageId) => `/${pageId.replace(/-/g, "")}`}
+          mapPageUrl={(pageId) => `/${(pageId || '').replace(/-/g, "")}`}
         />
       </div>
     );
