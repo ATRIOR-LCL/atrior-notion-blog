@@ -4,6 +4,8 @@ import MyNotionClassRenderer from './utils/notion-render'
 
 const notion = new NotionAPI()
 
+// 强制动态渲染，避免构建时预渲染因 react-notion-x 内部 bug 导致失败
+export const dynamic = 'force-dynamic'
 // 每 60 秒重新验证缓存
 export const revalidate = 60
 
