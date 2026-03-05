@@ -5,7 +5,7 @@ import 'rc-dropdown/assets/index.css'
 
 export const metadata = {
   title: "atrior notion blog",
-  description: "Simple Notion Blog with Notion",
+  description: "atrior's website based on Notion & Next.js",
 };
 
 const themeScript = `
