@@ -1,6 +1,7 @@
 import { NotionAPI } from 'notion-client'
 import { unstable_cache } from 'next/cache'
 import MyNotionClassRenderer from './utils/notion-render'
+import { patchRecordMap, fetchMissingCollections } from './utils/patch-notion'
 
 const notion = new NotionAPI()
 
@@ -14,8 +15,10 @@ const PAGE_ID = '2d404c3ffdd3807bbd38f6a5a781a749'
 // 缓存首页数据
 const getCachedHomePage = unstable_cache(
   async () => {
-    const recordMap = await notion.getPage(PAGE_ID)
+    let recordMap = await notion.getPage(PAGE_ID)
     if (recordMap && recordMap.block && Object.keys(recordMap.block).length > 0) {
+      recordMap = patchRecordMap(recordMap);
+      recordMap = await fetchMissingCollections(recordMap);
       return recordMap
     }
     throw new Error('Invalid recordMap received')

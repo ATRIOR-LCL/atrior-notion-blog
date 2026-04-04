@@ -7,6 +7,8 @@ import { Code } from "react-notion-x/build/third-party/code";
 import { Collection } from "react-notion-x/build/third-party/collection";
 import { Modal } from "react-notion-x/build/third-party/modal";
 
+import { patchRecordMap } from "./patch-notion";
+
 class MyNotionClassRenderer extends React.Component {
   constructor(props) {
     super(props);
@@ -63,47 +65,11 @@ class MyNotionClassRenderer extends React.Component {
     return url;
   };
 
-  // 修补 recordMap 中结构不一致的条目。
-  // Notion API 有时返回 { value: { value: {...}, role } } 而非 { value: {...}, role }，
-  // 需要解包多余的嵌套层，否则 react-notion-x 取不到 id/type 等关键字段。
-  patchTable = (table) => {
-    if (!table || typeof table !== 'object') return table;
-    const patched = {};
-    for (const [key, entry] of Object.entries(table)) {
-      if (!entry || !entry.value) {
-        patched[key] = entry;
-        continue;
-      }
-      // 检测多余嵌套：entry.value 含 value + role，真正数据在 entry.value.value
-      if (entry.value.value && entry.value.role !== undefined && !entry.value.id) {
-        patched[key] = {
-          ...entry,
-          value: entry.value.value,
-          role: entry.value.role,
-        };
-      } else {
-        patched[key] = entry;
-      }
-    }
-    return patched;
-  };
-
-  patchRecordMap = (recordMap) => {
-    if (!recordMap) return recordMap;
-    const result = { ...recordMap };
-    for (const tableName of ['block', 'collection', 'collection_view', 'collection_query']) {
-      if (result[tableName]) {
-        result[tableName] = this.patchTable(result[tableName]);
-      }
-    }
-    return result;
-  };
-
   render() {
     const { recordMap } = this.props;
     if (!recordMap) return null;
 
-    const patchedRecordMap = this.patchRecordMap(recordMap);
+    const patchedRecordMap = patchRecordMap(recordMap);
 
     return (
       <div className={this.state.isDarkMode ? "dark-mode" : ""}>

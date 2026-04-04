@@ -1,6 +1,7 @@
 import { NotionAPI } from 'notion-client'
 import { notFound } from 'next/navigation'
 import MyNotionClassRenderer from '../utils/notion-render'
+import { patchRecordMap, fetchMissingCollections } from '../utils/patch-notion'
 
 const notion = new NotionAPI()
 
@@ -18,8 +19,10 @@ function isValidNotionId(id) {
 async function getPageWithRetry(id, retries = 3, delay = 500) {
   for (let i = 0; i < retries; i++) {
     try {
-      const recordMap = await notion.getPage(id)
+      let recordMap = await notion.getPage(id)
       if (recordMap && recordMap.block && Object.keys(recordMap.block).length > 0) {
+        recordMap = patchRecordMap(recordMap);
+        recordMap = await fetchMissingCollections(recordMap);
         return recordMap
       }
       throw new Error('Invalid recordMap received')
