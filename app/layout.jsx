@@ -1,6 +1,6 @@
-import "./globals.css";
 import 'react-notion-x/src/styles.css'
 import 'rc-dropdown/assets/index.css'
+import "./globals.css";
 
 export const metadata = {
   title: "atrior notion blog",

@@ -1,24 +1,56 @@
-/* 使用 react-notion-x 的主题颜色，通过媒体查询自动响应系统主题 */
 html {
   background-color: #fff;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    background-color: #2f3437;
-    color-scheme: dark;
-  }
+html.dark-mode {
+  background-color: rgb(25, 25, 25);
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  background-color: inherit;
+  background-color: var(--bg-color, inherit);
 }
 
 * {
   box-sizing: border-box;
+}
+
+html.dark-mode,
+.notion.dark-mode {
+  --fg-color: rgba(255, 255, 255, 0.81);
+  --fg-color-0: rgba(255, 255, 255, 0.055);
+  --fg-color-1: rgba(255, 255, 255, 0.13);
+  --fg-color-2: rgba(255, 255, 255, 0.282);
+  --fg-color-3: rgba(255, 255, 255, 0.443);
+  --fg-color-4: rgba(255, 255, 255, 0.81);
+  --fg-color-5: rgba(255, 255, 255, 0.055);
+  --fg-color-6: rgba(255, 255, 255, 0.81);
+  --fg-color-7: rgba(255, 255, 255, 0.443);
+  --fg-color-icon: rgba(255, 255, 255, 0.443);
+
+  --bg-color: rgb(25, 25, 25);
+  --bg-color-0: rgba(255, 255, 255, 0.055);
+  --bg-color-1: rgb(32, 32, 32);
+  --bg-color-2: rgba(255, 255, 255, 0.094);
+
+  --notion-red_background: rgb(82, 46, 42);
+  --notion-pink_background: rgb(78, 44, 60);
+  --notion-blue_background: rgb(20, 58, 78);
+  --notion-purple_background: rgb(60, 45, 73);
+  --notion-teal_background: rgb(35, 64, 58);
+  --notion-yellow_background: rgb(86, 67, 40);
+  --notion-orange_background: rgb(92, 59, 35);
+  --notion-brown_background: rgb(74, 50, 40);
+  --notion-gray_background: rgb(47, 47, 47);
+}
+
+.notion.dark-mode .notion-frame,
+.notion.dark-mode .notion-page-scroller,
+.notion.dark-mode .notion-header {
+  background: var(--bg-color);
 }
 
 .route-loading {
@@ -59,17 +91,19 @@ body {
   width: 52%;
 }
 
-@media (prefers-color-scheme: dark) {
-  .route-loading__title,
-  .route-loading__line {
-    background: linear-gradient(
-      90deg,
-      #3f4447 25%,
-      #474c50 37%,
-      #3f4447 63%
-    );
-    background-size: 400% 100%;
-  }
+html.dark-mode .route-loading {
+  color: var(--fg-color);
+}
+
+html.dark-mode .route-loading__title,
+html.dark-mode .route-loading__line {
+  background: linear-gradient(
+    90deg,
+    rgb(47, 47, 47) 25%,
+    rgb(55, 55, 55) 37%,
+    rgb(47, 47, 47) 63%
+  );
+  background-size: 400% 100%;
 }
 
 @keyframes route-loading-shimmer {

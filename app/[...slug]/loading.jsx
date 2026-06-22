@@ -6,5 +6,5 @@ export default function LoadingPost() {
       <div className="route-loading__line" />
       <div className="route-loading__line route-loading__line--short" />
     </main>
-  );
+  )
 }

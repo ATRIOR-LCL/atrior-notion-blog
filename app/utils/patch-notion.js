@@ -1,9 +1,15 @@
 import { NotionAPI } from 'notion-client'
 import { unstable_cache } from 'next/cache'
 import { getBlockCollectionId, getPageContentBlockIds } from 'notion-utils'
+import {
+  HOME_PAGE_ID,
+  NOTION_REVALIDATE_SECONDS,
+} from './notion-config'
 
-export const HOME_PAGE_ID = '2d404c3ffdd3807bbd38f6a5a781a749'
-export const NOTION_REVALIDATE_SECONDS = 60
+export {
+  HOME_PAGE_ID,
+  NOTION_REVALIDATE_SECONDS,
+} from './notion-config'
 
 const notion = new NotionAPI()
 
