@@ -1,5 +1,36 @@
 import { NotionAPI } from 'notion-client'
+import { unstable_cache } from 'next/cache'
+import { getBlockCollectionId, getPageContentBlockIds } from 'notion-utils'
+
+export const HOME_PAGE_ID = '2d404c3ffdd3807bbd38f6a5a781a749'
+export const NOTION_REVALIDATE_SECONDS = 60
+
 const notion = new NotionAPI()
+
+const mergeRecordMap = (target, source) => {
+  if (!source) return target;
+
+  const patchedSource = patchRecordMap(source);
+
+  target.block = {
+    ...target.block,
+    ...patchedSource.block,
+  };
+  target.collection = {
+    ...target.collection,
+    ...patchedSource.collection,
+  };
+  target.collection_view = {
+    ...target.collection_view,
+    ...patchedSource.collection_view,
+  };
+  target.notion_user = {
+    ...target.notion_user,
+    ...patchedSource.notion_user,
+  };
+
+  return target;
+};
 
 export const patchTable = (table) => {
   if (!table || typeof table !== 'object') return table;
@@ -30,17 +61,67 @@ export const patchRecordMap = (recordMap) => {
       result[tableName] = patchTable(result[tableName]);
     }
   }
+  result.collection = result.collection || {};
+  result.collection_view = result.collection_view || {};
+  result.collection_query = result.collection_query || {};
+  result.notion_user = result.notion_user || {};
+  result.signed_urls = result.signed_urls || {};
+  return result;
+};
+
+export const fetchMissingBlocks = async (recordMap) => {
+  if (!recordMap || !recordMap.block) return recordMap;
+
+  const result = patchRecordMap(recordMap);
+  const maxIterations = 10;
+  const batchSize = 100;
+
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
+    const pendingBlockIds = getPageContentBlockIds(result).filter(
+      (blockId) => !result.block?.[blockId]?.value
+    );
+
+    if (!pendingBlockIds.length) {
+      return result;
+    }
+
+    let fetchedCount = 0;
+
+    for (let i = 0; i < pendingBlockIds.length; i += batchSize) {
+      const batch = pendingBlockIds.slice(i, i + batchSize);
+      const blocksData = await notion.getBlocks(batch);
+      const patchedBlocks = patchRecordMap(blocksData.recordMap)?.block || {};
+      const resolvedBlocks = Object.fromEntries(
+        Object.entries(patchedBlocks).filter(([, entry]) => entry?.value)
+      );
+
+      fetchedCount += Object.keys(resolvedBlocks).length;
+      result.block = {
+        ...result.block,
+        ...resolvedBlocks,
+      };
+    }
+
+    if (!fetchedCount) {
+      console.warn("NotionAPI missing blocks could not be resolved", pendingBlockIds);
+      return result;
+    }
+  }
+
+  console.warn("NotionAPI missing blocks reached iteration limit");
   return result;
 };
 
 export const fetchMissingCollections = async (recordMap) => {
   if (!recordMap || !recordMap.block) return recordMap;
+
+  recordMap = patchRecordMap(recordMap);
   
   const contentBlockIds = Object.keys(recordMap.block);
   const allCollectionInstances = contentBlockIds.flatMap((blockId) => {
     const block = recordMap.block[blockId]?.value;
     if (block && (block.type === 'collection_view' || block.type === 'collection_view_page')) {
-      const collectionId = block.collection_id;
+      const collectionId = getBlockCollectionId(block, recordMap) || block.collection_id;
       if (collectionId) {
         const spaceId = block.space_id;
         return block.view_ids?.map((collectionViewId) => ({
@@ -76,22 +157,7 @@ export const fetchMissingCollections = async (recordMap) => {
       );
       
       // 合并获取到的新数据
-      recordMap.block = {
-        ...recordMap.block,
-        ...collectionData.recordMap?.block
-      };
-      recordMap.collection = {
-        ...recordMap.collection,
-        ...collectionData.recordMap?.collection
-      };
-      recordMap.collection_view = {
-        ...recordMap.collection_view,
-        ...collectionData.recordMap?.collection_view
-      };
-      recordMap.notion_user = {
-        ...recordMap.notion_user,
-        ...collectionData.recordMap?.notion_user
-      };
+      recordMap = mergeRecordMap(recordMap, collectionData.recordMap);
       
       recordMap.collection_query[collectionId] = {
         ...recordMap.collection_query[collectionId],
@@ -103,4 +169,52 @@ export const fetchMissingCollections = async (recordMap) => {
   }
   
   return recordMap;
+};
+
+export const hydrateRecordMap = async (recordMap) => {
+  let result = patchRecordMap(recordMap);
+  result = await fetchMissingBlocks(result);
+  result = await fetchMissingCollections(result);
+  result = await fetchMissingBlocks(result);
+  return result;
+};
+
+const fetchNotionPage = async (pageId) => {
+  let recordMap = await notion.getPage(pageId, {
+    fetchMissingBlocks: false,
+    fetchCollections: false,
+  });
+
+  if (!recordMap?.block || Object.keys(recordMap.block).length === 0) {
+    throw new Error('Invalid recordMap received');
+  }
+
+  return hydrateRecordMap(recordMap);
+};
+
+const getCachedNotionPage = unstable_cache(
+  async (pageId) => fetchNotionPage(pageId),
+  ['notion-page'],
+  { revalidate: NOTION_REVALIDATE_SECONDS }
+);
+
+export const getNotionPage = async (pageId) => getCachedNotionPage(pageId);
+
+export const getNotionPageWithRetry = async (
+  pageId,
+  retries = 3,
+  delay = 500
+) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await getNotionPage(pageId);
+    } catch (error) {
+      console.error(`Attempt ${i + 1} failed for page ${pageId}:`, error.message);
+      if (i < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
+      } else {
+        throw error;
+      }
+    }
+  }
 };

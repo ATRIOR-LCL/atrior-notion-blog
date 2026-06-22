@@ -1,58 +1,22 @@
-import { NotionAPI } from 'notion-client'
-import { unstable_cache } from 'next/cache'
-import MyNotionClassRenderer from './utils/notion-render'
-import { patchRecordMap, fetchMissingCollections } from './utils/patch-notion'
+import NotionPageRenderer from './utils/notion-render'
+import {
+  HOME_PAGE_ID,
+  getNotionPageWithRetry,
+} from './utils/patch-notion'
 
-const notion = new NotionAPI()
-
-// 强制动态渲染，避免构建时预渲染因 react-notion-x 内部 bug 导致失败
-export const dynamic = 'force-dynamic'
 // 每 60 秒重新验证缓存
 export const revalidate = 60
-
-const PAGE_ID = '2d404c3ffdd3807bbd38f6a5a781a749'
-
-// 缓存首页数据
-const getCachedHomePage = unstable_cache(
-  async () => {
-    let recordMap = await notion.getPage(PAGE_ID)
-    if (recordMap && recordMap.block && Object.keys(recordMap.block).length > 0) {
-      recordMap = patchRecordMap(recordMap);
-      recordMap = await fetchMissingCollections(recordMap);
-      return recordMap
-    }
-    throw new Error('Invalid recordMap received')
-  },
-  ['notion-home'],
-  { revalidate: 60 }
-)
-
-// 带重试机制的获取页面函数
-async function getPageWithRetry(retries = 3, delay = 500) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await getCachedHomePage()
-    } catch (error) {
-      console.error(`Attempt ${i + 1} failed:`, error.message)
-      if (i < retries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)))
-      } else {
-        throw error
-      }
-    }
-  }
-}
 
 export default async function Page() {
   let recordMap;
   try {
-    recordMap = await getPageWithRetry()
+    recordMap = await getNotionPageWithRetry(HOME_PAGE_ID)
   } catch (error) {
     console.error("Failed to fetch Notion data", error)
     return <div>无法加载页面，请稍后刷新重试。</div>
   }
 
   return (
-      <MyNotionClassRenderer recordMap={recordMap} />
+      <NotionPageRenderer recordMap={recordMap} />
   )
 }

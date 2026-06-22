@@ -1,93 +1,95 @@
 "use client";
+
 import React from "react";
-import { NotionRenderer } from "react-notion-x";
 import Link from "next/link";
+import { NotionRenderer } from "react-notion-x";
 
 import { Code } from "react-notion-x/build/third-party/code";
 import { Collection } from "react-notion-x/build/third-party/collection";
 import { Modal } from "react-notion-x/build/third-party/modal";
 
-import { patchRecordMap } from "./patch-notion";
+const mapPageUrl = (pageId) => `/${(pageId || "").replace(/-/g, "")}`;
 
-class MyNotionClassRenderer extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      isDarkMode: false,
-      darkModeMediaQuery: null,
-    };
+const mapCachedNotionImageUrl = (url, block) => {
+  const blockId = block?.id;
+  if (!blockId) return url;
+
+  const table = block?.type === "collection" ? "collection" : "block";
+  const params = new URLSearchParams({
+    src: url,
+    id: blockId,
+    table,
+  });
+
+  return `/api/notion-image?${params.toString()}`;
+};
+
+const mapImageUrl = (url, block) => {
+  if (!url) return null;
+  if (url.startsWith("data:")) return url;
+
+  if (url.startsWith("/images/")) {
+    return mapCachedNotionImageUrl(url, block);
   }
 
-  componentDidMount() {
-    this.darkModeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    this.setState({ isDarkMode: this.darkModeMediaQuery.matches });
-    this.darkModeMediaQuery.addEventListener("change", this.handleThemeChange);
+  if (
+    url.startsWith("attachment:") ||
+    url.includes("secure.notion-static.com") ||
+    url.includes("amazonaws.com") ||
+    url.includes("notionusercontent.com")
+  ) {
+    return mapCachedNotionImageUrl(url, block);
   }
 
-  componentWillUnmount() {
-    if (this.darkModeMediaQuery) {
-      this.darkModeMediaQuery.removeEventListener(
-        "change",
-        this.handleThemeChange
-      );
-    }
-  }
+  return url;
+};
 
-  handleThemeChange = (e) => {
-    this.setState({ isDarkMode: e.matches });
-  };
+const PrefetchLink = React.forwardRef(function PrefetchLink(
+  { prefetch = true, ...props },
+  ref
+) {
+  return <Link ref={ref} prefetch={prefetch} {...props} />;
+});
 
-  mapImageUrl = (url, block) => {
-    if (!url) return null;
-    if (url.startsWith("data:")) return url;
+const notionComponents = {
+  Code,
+  Collection,
+  Modal,
+  nextLink: PrefetchLink,
+};
 
-    if (url.startsWith("/images/")) {
-      return `https://www.notion.so${url}`;
-    }
+const subscribeToColorScheme = (onStoreChange) => {
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  mediaQuery.addEventListener("change", onStoreChange);
+  return () => mediaQuery.removeEventListener("change", onStoreChange);
+};
 
-    if (
-      url.startsWith("attachment:") ||
-      url.includes("secure.notion-static.com") ||
-      url.includes("amazonaws.com") ||
-      url.includes("notionusercontent.com")
-    ) {
-      try {
-        const table = block.type === "collection" ? "collection" : "block";
-        const blockId = block.id;
+const getClientColorSchemeSnapshot = () =>
+  window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-        return `https://www.notion.so/image/${encodeURIComponent(
-          url
-        )}?table=${table}&id=${blockId}&cache=v2`;
-      } catch (e) {
-        return url;
-      }
-    }
-    return url;
-  };
+const getServerColorSchemeSnapshot = () => false;
 
-  render() {
-    const { recordMap } = this.props;
-    if (!recordMap) return null;
-
-    const patchedRecordMap = patchRecordMap(recordMap);
-
-    return (
-      <div className={this.state.isDarkMode ? "dark-mode" : ""}>
-        <NotionRenderer
-          recordMap={patchedRecordMap}
-          fullPage={true}
-          components={{
-            Code,
-            Collection,
-            Modal,
-            nextLink: Link,
-          }}
-          mapImageUrl={this.mapImageUrl}
-          mapPageUrl={(pageId) => `/${(pageId || '').replace(/-/g, "")}`}
-        />
-      </div>
-    );
-  }
+function usePrefersDarkMode() {
+  return React.useSyncExternalStore(
+    subscribeToColorScheme,
+    getClientColorSchemeSnapshot,
+    getServerColorSchemeSnapshot
+  );
 }
 
-export default MyNotionClassRenderer;
+export default function NotionPageRenderer({ recordMap }) {
+  const isDarkMode = usePrefersDarkMode();
+
+  if (!recordMap) return null;
+
+  return (
+    <NotionRenderer
+      recordMap={recordMap}
+      fullPage={true}
+      darkMode={isDarkMode}
+      components={notionComponents}
+      mapImageUrl={mapImageUrl}
+      mapPageUrl={mapPageUrl}
+    />
+  );
+}
